@@ -1,0 +1,3 @@
+[submodule "refs/ntl"]
+	path = refs/ntl
+	url = https://github.com/libntl/ntl.git
