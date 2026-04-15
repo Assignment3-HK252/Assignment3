@@ -430,3 +430,5 @@ FodyWeavers.xsd
 # Exclusion list
 !srcs/lib/Debug
 !srcs/lib/Release
+/Mở rộng RSA.txt
+/.vscode
