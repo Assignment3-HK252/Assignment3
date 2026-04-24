@@ -1,6 +1,9 @@
 # Requirement
 
-Visual Studio 2015 or higher version, with CPP developement enviroment installed
+- Visual Studio 2015 or higher version, with CPP developement enviroment installed
+- PlatformToolset v145 installed
+- Window SDK installed
+- CPP Standard ISO C++20 
 
 # How to use
 
