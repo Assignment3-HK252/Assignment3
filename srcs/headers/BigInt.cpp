@@ -174,6 +174,39 @@ NTL::ZZ BigInt::GenerateLargePrime(int bits) {
     }
 }
 
+NTL::ZZ BigInt::GenerateStrongLargePrime(int bits)
+{
+    // 1. Sinh hai số nguyên tố lớn ngẫu nhiên s và t (khoảng bits/2)
+    NTL::ZZ s = GenerateLargePrime(bits / 2 - 8);
+    NTL::ZZ t = GenerateLargePrime(bits / 2 - 8);
+
+    // 2. Tìm r = 2 * i * t + 1 sao cho r là số nguyên tố
+    NTL::ZZ r;
+    NTL::ZZ i(1);
+    while (true) {
+        r = 2 * i * t + 1;
+        if (MillerRabinTest(r, 40)) break;
+        i++;
+    }
+
+    // 3. Tính p_zero = 2 * (s^(r-2) mod r) * s - 1
+    NTL::ZZ s_inv_r = PowerMod(s, r - 2, r); // Theo định lý Fermat nhỏ
+    NTL::ZZ p_zero = 2 * s_inv_r * s - 1;
+
+    // 4. Tìm p = p_zero + 2 * j * r * s sao cho p là số nguyên tố
+    NTL::ZZ p;
+    NTL::ZZ rs2 = 2 * r * s;
+    NTL::ZZ j(1);
+    while (true) {
+        p = p_zero + j * rs2;
+        // Đảm bảo p có đủ số bit yêu cầu
+        if (NTL::NumBits(p) >= bits && MillerRabinTest(p, 40)) {
+            return p;
+        }
+        j++;
+    }
+}
+
 // ============================================================
 //  GenerateKeyPair  –  tạo bộ khóa RSA từ 2 số nguyên tố p, q
 // ============================================================

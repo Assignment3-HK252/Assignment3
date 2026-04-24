@@ -15,6 +15,7 @@ public:
     static bool    PassSmallPrimeTests(NTL::ZZ n);
     static bool    MillerRabinTest(NTL::ZZ n, int k = 40);
     static NTL::ZZ GenerateLargePrime(int bits = 512);
+	static NTL::ZZ GenerateStrongLargePrime(int bits = 512);   // p, q sao cho p-1 và q-1 đều có ít nhất một thừa số nguyên tố lớn
 
     // === RSA ===
     struct RSAKeyPair {

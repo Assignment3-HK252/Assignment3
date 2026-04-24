@@ -158,12 +158,12 @@ void demo_prime() {
     printSep("DEMO 2: Sinh so nguyen to lon");
 
     cout << "Dang sinh so nguyen to 512-bit...\n";
-    NTL::ZZ p512 = BigInt::GenerateLargePrime(512);
+    NTL::ZZ p512 = BigInt::GenerateStrongLargePrime(512);
     cout << "p (512-bit) = " << p512 << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p512) << "\n";
 
     cout << "\nDang sinh so nguyen to 1024-bit...\n";
-    NTL::ZZ p1024 = BigInt::GenerateLargePrime(1024);
+    NTL::ZZ p1024 = BigInt::GenerateStrongLargePrime(1024);
     cout << "p (1024-bit) = " << p1024 << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p1024) << "\n";
 }
@@ -175,14 +175,14 @@ void demo_keygen(int bits = 512) {
     printSep("DEMO 3: Tao bo khoa RSA (" + to_string(bits * 2) + "-bit modulus)");
 
     cout << "Dang sinh p (" << bits << "-bit)...\n";
-    NTL::ZZ p = BigInt::GenerateLargePrime(bits);
+    NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
 
     cout << "Dang sinh q (" << bits << "-bit)...\n";
-    NTL::ZZ q = BigInt::GenerateLargePrime(bits);
+    NTL::ZZ q = BigInt::GenerateStrongLargePrime(bits);
 
     while (p == q) {
         cout << "p == q, sinh lai q...\n";
-        q = BigInt::GenerateLargePrime(bits);
+        q = BigInt::GenerateStrongLargePrime(bits);
     }
 
     cout << "\np = " << p << "\n";
@@ -208,9 +208,9 @@ void demo_keygen(int bits = 512) {
 void demo_encrypt_number() {
     printSep("DEMO 4: Ma hoa / Giai ma so nguyen (512-bit keys)");
 
-    NTL::ZZ p = BigInt::GenerateLargePrime(512);
-    NTL::ZZ q = BigInt::GenerateLargePrime(512);
-    while (p == q) q = BigInt::GenerateLargePrime(512);
+    NTL::ZZ p = BigInt::GenerateStrongLargePrime(512);
+    NTL::ZZ q = BigInt::GenerateStrongLargePrime(512);
+    while (p == q) q = BigInt::GenerateStrongLargePrime(512);
 
     BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
 
@@ -234,9 +234,9 @@ void demo_encrypt_number() {
 void demo_encrypt_string() {
     printSep("DEMO 5: Ma hoa / Giai ma chuoi van ban");
 
-    NTL::ZZ p = BigInt::GenerateLargePrime(512);
-    NTL::ZZ q = BigInt::GenerateLargePrime(512);
-    while (p == q) q = BigInt::GenerateLargePrime(512);
+    NTL::ZZ p = BigInt::GenerateStrongLargePrime(512);
+    NTL::ZZ q = BigInt::GenerateStrongLargePrime(512);
+    while (p == q) q = BigInt::GenerateStrongLargePrime(512);
 
     BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
 
@@ -322,7 +322,7 @@ void interactive_prime() {
 
     int bits = readInt("Nhap so bit (16 - 2048): ", 16, 2048);
     cout << "Dang sinh so nguyen to " << bits << "-bit...\n";
-    NTL::ZZ p = BigInt::GenerateLargePrime(bits);
+    NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
     cout << "p = " << p << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p) << "\n";
 }
@@ -343,12 +343,12 @@ void interactive_keygen() {
     if (choice == 1) {
         int bits = readInt("Nhap so bit cho moi so nguyen to (16 - 1024): ", 16, 1024);
         cout << "Dang sinh p...\n";
-        p = BigInt::GenerateLargePrime(bits);
+        p = BigInt::GenerateStrongLargePrime(bits);
         cout << "Dang sinh q...\n";
-        q = BigInt::GenerateLargePrime(bits);
+        q = BigInt::GenerateStrongLargePrime(bits);
         while (p == q) {
             cout << "p == q, sinh lai q...\n";
-            q = BigInt::GenerateLargePrime(bits);
+            q = BigInt::GenerateStrongLargePrime(bits);
         }
     }
     else {
@@ -448,10 +448,10 @@ void interactive_full_flow() {
     int bits = readInt("Nhap so bit cho moi so nguyen to (16 - 1024): ", 16, 1024);
 
     cout << "Dang sinh p...\n";
-    NTL::ZZ p = BigInt::GenerateLargePrime(bits);
+    NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
     cout << "Dang sinh q...\n";
-    NTL::ZZ q = BigInt::GenerateLargePrime(bits);
-    while (p == q) { cout << "p == q, sinh lai...\n"; q = BigInt::GenerateLargePrime(bits); }
+    NTL::ZZ q = BigInt::GenerateStrongLargePrime(bits);
+    while (p == q) { cout << "p == q, sinh lai...\n"; q = BigInt::GenerateStrongLargePrime(bits); }
 
     BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
     cout << "\n[Khoa da tao]\n";
