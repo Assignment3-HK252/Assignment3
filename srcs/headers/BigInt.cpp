@@ -177,8 +177,11 @@ NTL::ZZ BigInt::GenerateLargePrime(int bits) {
 NTL::ZZ BigInt::GenerateStrongLargePrime(int bits)
 {
     // 1. Sinh hai số nguyên tố lớn ngẫu nhiên s và t (khoảng bits/2)
-    NTL::ZZ s = GenerateLargePrime(bits / 2 - 8);
-    NTL::ZZ t = GenerateLargePrime(bits / 2 - 8);
+    int sub_bits = bits / 2 - 8;
+    if (sub_bits < 2) sub_bits = 2; // Đảm bảo tối thiểu 2 bit
+
+    NTL::ZZ s = GenerateLargePrime(sub_bits);
+    NTL::ZZ t = GenerateLargePrime(sub_bits);
 
     // 2. Tìm r = 2 * i * t + 1 sao cho r là số nguyên tố
     NTL::ZZ r;

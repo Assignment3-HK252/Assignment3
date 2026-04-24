@@ -60,9 +60,9 @@ void printSep(const string& title = "") {
 //  Tiện ích nhập liệu  –  gõ 'q' / 'Q' để hủy bất kỳ lúc nào
 // ============================================================
 
-// Kiểm tra chuỗi có phải lệnh hủy / thoát không
-inline bool isCancel(const string& s) { return s == "q" || s == "Q"; }
-inline bool isExit(const string& s) { return s == "e" || s == "E"; }
+// Kiểm tra chuỗi có phải lệnh hủy / thoát không (thêm dấu :)
+inline bool isCancel(const string& s) { return s == ":q" || s == ":Q"; }
+inline bool isExit(const string& s) { return s == ":e" || s == ":E"; }
 
 // Kiểm tra và ném exception tương ứng nếu cần
 inline void checkSpecial(const string& s) {
@@ -73,7 +73,7 @@ inline void checkSpecial(const string& s) {
 // Đọc số nguyên lớn (ZZ). Gõ 'q' = hủy, 'e' = thoát
 NTL::ZZ readZZ(const string& prompt) {
     while (true) {
-        cout << prompt << " (q=huy / e=thoat) ";
+        cout << prompt << " (:q=huy / :e=thoat): "; // Đã thêm dấu : vào hướng dẫn
         string s;
         cin >> s;
         checkSpecial(s);
@@ -95,7 +95,7 @@ NTL::ZZ readZZ(const string& prompt) {
 // Đọc số nguyên thông thường trong [lo, hi]. Gõ 'q' = hủy, 'e' = thoát
 int readInt(const string& prompt, int lo, int hi) {
     while (true) {
-        cout << prompt << " (q=huy / e=thoat) ";
+        cout << prompt << " (:q=huy / :e=thoat): ";
         string s;
         cin >> s;
         checkSpecial(s);
@@ -106,8 +106,7 @@ int readInt(const string& prompt, int lo, int hi) {
             if (pos == s.size() && v >= lo && v <= hi) return v;
         }
         catch (...) {}
-        cout << "  [Loi] Nhap so nguyen trong khoang [" << lo << ", " << hi
-            << "], 'q' de huy, 'e' de thoat. Thu lai.\n";
+        cout << "  [Loi] Nhap so trong [" << lo << ", " << hi << "], ':q' de huy. Thu lai.\n";
     }
 }
 
@@ -320,7 +319,7 @@ void interactive_math() {
 void interactive_prime() {
     printSep("INTERACTIVE: Sinh so nguyen to lon");
 
-    int bits = readInt("Nhap so bit (16 - 2048): ", 16, 2048);
+    int bits = readInt("Nhap so bit (32 - 2048): ", 32, 2048);
     cout << "Dang sinh so nguyen to " << bits << "-bit...\n";
     NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
     cout << "p = " << p << "\n";
@@ -375,6 +374,69 @@ void interactive_keygen() {
     }
     catch (const exception& e) {
         cout << "[Loi] " << e.what() << "\n";
+    }
+}
+
+// ============================================================
+//  INTERACTIVE: Mã hóa 
+// ============================================================
+
+void interactive_encrypt_only() {
+    printSep("MA HOA RIENG BIET (Public Key Only)");
+
+    cout << "--- Nhap Public Key ---\n";
+    NTL::ZZ n = readZZ("Nhap n (modulus): ");
+    NTL::ZZ e = readZZ("Nhap e (public exponent): ");
+
+    cout << "\n[1] Ma hoa so nguyen\n"
+        << "[2] Ma hoa chuoi van ban\n"
+        << "[0] Quay lai\n";
+    int sub = readInt("Chon loai du lieu:", 0, 2);
+
+    if (sub == 1) {
+        NTL::ZZ M = readZZ("Nhap M (0 <= M < n): ");
+        if (M < 0 || M >= n) { cout << "[Loi] M sai khoang cho phep.\n"; return; }
+        cout << "Ban ma C = " << BigInt::Encrypt(M, e, n) << "\n";
+    }
+    else if (sub == 2) {
+        string pt = readLine("Nhap plaintext:");
+        NTL::ZZ M = StringToZZ(pt);
+        if (M >= n) { cout << "[Loi] Chuoi qua dai.\n"; return; }
+        cout << "Ban ma C = " << BigInt::Encrypt(M, e, n) << "\n";
+    }
+}
+
+// ============================================================
+//  INTERACTIVE: Giải mã 
+// ============================================================
+
+void interactive_decrypt_only() {
+    printSep("GIAI MA RIENG BIET (Private Key Only)");
+
+    cout << "--- Nhap Private Key ---\n";
+    NTL::ZZ n = readZZ("Nhap n (modulus): ");
+    NTL::ZZ d = readZZ("Nhap d (private exponent): ");
+
+    NTL::ZZ C = readZZ("Nhap ban ma C can giai ma: ");
+
+    cout << "\n[1] Giai ma ra so nguyen\n"
+        << "[2] Giai ma ra chuoi van ban\n"
+        << "[0] Quay lai\n";
+    int sub = readInt("Chon loai ket qua mong muon:", 0, 2);
+
+    NTL::ZZ M = BigInt::Decrypt(C, d, n);
+
+    if (sub == 1) {
+        cout << "Ket qua M = " << M << "\n";
+    }
+    else if (sub == 2) {
+        try {
+            string res = ZZToString(M);
+            cout << "Ket qua plaintext: \"" << res << "\"\n";
+        }
+        catch (...) {
+            cout << "[Loi] Khong the chuyen so nay thanh chuoi van ban.\n";
+        }
     }
 }
 
@@ -490,9 +552,10 @@ void showMainMenu() {
     cout << "  [2]  Demo toan hoc co ban     (interactive)\n";
     cout << "  [3]  Sinh so nguyen to lon    (interactive)\n";
     cout << "  [4]  Tao bo khoa RSA          (interactive)\n";
-    cout << "  [5]  Ma hoa / giai ma so      (interactive)\n";
-    cout << "  [6]  Ma hoa / giai ma chuoi   (interactive)\n";
-    cout << "  [7]  Luong RSA day du         (interactive)\n";
+    cout << "  [5]  Ma hoa                   (interactive)\n";
+	cout << "  [6]  Giai ma                  (interactive)\n";
+    cout << "  [7]  Ma hoa va giai ma chuoi  (interactive)\n";
+    cout << "  [8]  Luong RSA day du         (interactive)\n";
     cout << "  [0]  Thoat\n";
     cout << string(60, '-') << "\n";
     cout << "  Tip: Gõ 'q' de huy thao tac dang lam  |  'e' de thoat chuong trinh\n";
@@ -510,7 +573,16 @@ int main() {
     try {
         while (true) {
             showMainMenu();
-            int choice = readInt("Chon chuc nang: ", 0, 7);
+            int choice;
+
+            try {
+                // Nếu gõ :q ở đây, readInt sẽ ném CancelException
+                choice = readInt("Chon chuc nang", 0, 8);
+            }
+            catch (const CancelException&) {
+                // Bắt CancelException tại menu chính -> Chuyển thành thoát
+                throw ExitException{};
+            }
 
             try {
                 switch (choice) {
@@ -530,9 +602,10 @@ int main() {
                 case 2: interactive_math();             break;
                 case 3: interactive_prime();            break;
                 case 4: interactive_keygen();           break;
-                case 5: interactive_encrypt_number();   break;
-                case 6: interactive_encrypt_string();   break;
-                case 7: interactive_full_flow();        break;
+                case 5: interactive_encrypt_only();     break;
+                case 6: interactive_decrypt_only();     break;
+                case 7: interactive_encrypt_string();   break;
+                case 8: interactive_full_flow();        break;
                 }
             }
             catch (const CancelException&) {
