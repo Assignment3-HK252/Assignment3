@@ -78,7 +78,7 @@ void timePrint(TimePoint start, const string& label = "") {
     cout << "\n  [TIMER] ";
     if (!label.empty()) cout << label << ": ";
     if (us < 1000)
-        cout << us << " us\n";
+        cout << us << " μs\n";
     else if (us < 1'000'000)
         cout << us / 1000.0 << " ms\n";
     else
