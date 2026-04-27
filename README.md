@@ -1,11 +1,12 @@
-# Requirement
+# Yêu cầu
 
-- Visual Studio 2015 or higher version, with CPP developement enviroment installed
-- PlatformToolset v145 installed
-- Window SDK installed
-- CPP Standard ISO C++20 or higher
+- Visual Studio phiên bản 2015 hoặc mới hơn, đã cài đặt môi trường phát triển C++
+- PlatformToolset v145 đã được cài đặt
+- Windows SDK đã được cài đặt
+- Compiler đáp ứng chuẩn C++ ISO C++20
 
-# How to use
+# Cách dựng dự án
 
-- Open project via Assignment3.slnx with Visual Studio
-- Build project, then run
+- Mở file Assignment3.slnx bằng Visual Studio
+- Dùng chức năng Build->Build Solutions hoặc ấn Ctrl+Shift+B để dựng dự án
+- Để chạy dự án, dùng chức năng "Run" hoặc di chuyển đến thư mục x64->Release và chạy file Assignment3.exe
