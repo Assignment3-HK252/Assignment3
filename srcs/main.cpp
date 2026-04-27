@@ -2,6 +2,7 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
+#include <chrono>
 #include <NTL/ZZ.h>
 #include "headers/BigInt.h"
 
@@ -21,6 +22,13 @@ struct CancelException : public exception {
 struct ExitException : public exception {
     const char* what() const noexcept override {
         return "Nguoi dung yeu cau thoat.";
+    }
+};
+
+// Ném khi người dùng gõ ':clear' hoặc nhấn Ctrl+L → xóa màn hình, về menu chính
+struct ClearException : public exception {
+    const char* what() const noexcept override {
+        return "Nguoi dung yeu cau xoa man hinh.";
     }
 };
 
@@ -57,23 +65,57 @@ void printSep(const string& title = "") {
 }
 
 // ============================================================
+//  Tiện ích đo thời gian
+// ============================================================
+using Clock = std::chrono::high_resolution_clock;
+using TimePoint = std::chrono::time_point<Clock>;
+
+TimePoint timeStart() { return Clock::now(); }
+
+void timePrint(TimePoint start, const string& label = "") {
+    auto end = Clock::now();
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    cout << "\n  [TIMER] ";
+    if (!label.empty()) cout << label << ": ";
+    if (us < 1000)
+        cout << us << " us\n";
+    else if (us < 1'000'000)
+        cout << us / 1000.0 << " ms\n";
+    else
+        cout << us / 1'000'000.0 << " s\n";
+}
+
+// ============================================================
 //  Tiện ích nhập liệu  –  gõ 'q' / 'Q' để hủy bất kỳ lúc nào
 // ============================================================
 
 // Kiểm tra chuỗi có phải lệnh hủy / thoát không (thêm dấu :)
 inline bool isCancel(const string& s) { return s == ":q" || s == ":Q"; }
 inline bool isExit(const string& s) { return s == ":e" || s == ":E"; }
+inline bool isClear(const string& s) { return s == ":clear" || s == ":CLEAR"; }
+
+// Xóa màn hình (Windows dùng "cls", Linux/Mac dùng "clear")
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
 
 // Kiểm tra và ném exception tương ứng nếu cần
 inline void checkSpecial(const string& s) {
     if (isExit(s))   throw ExitException{};
     if (isCancel(s)) throw CancelException{};
+    if (isClear(s))  throw ClearException{};
+    // Ctrl+L gửi ký tự \x0C (form feed) – xử lý nếu chuỗi chứa nó
+    if (!s.empty() && s[0] == '\x0C') throw ClearException{};
 }
 
-// Đọc số nguyên lớn (ZZ). Gõ 'q' = hủy, 'e' = thoát
+// Đọc số nguyên lớn (ZZ). Gõ ':q' = hủy, ':e' = thoát, ':clear' = xóa màn hình
 NTL::ZZ readZZ(const string& prompt) {
     while (true) {
-        cout << prompt << " (:q=huy / :e=thoat): "; // Đã thêm dấu : vào hướng dẫn
+        cout << prompt << " (:q=huy / :e=thoat / :clear=xoa man hinh): ";
         string s;
         cin >> s;
         checkSpecial(s);
@@ -92,10 +134,10 @@ NTL::ZZ readZZ(const string& prompt) {
     }
 }
 
-// Đọc số nguyên thông thường trong [lo, hi]. Gõ 'q' = hủy, 'e' = thoát
+// Đọc số nguyên thông thường trong [lo, hi]. Gõ ':q' = hủy, ':e' = thoát, ':clear' = xóa màn hình
 int readInt(const string& prompt, int lo, int hi) {
     while (true) {
-        cout << prompt << " (:q=huy / :e=thoat): ";
+        cout << prompt << " (:q=huy / :e=thoat / :clear=xoa man hinh): ";
         string s;
         cin >> s;
         checkSpecial(s);
@@ -110,9 +152,9 @@ int readInt(const string& prompt, int lo, int hi) {
     }
 }
 
-// Đọc một dòng chuỗi. Gõ 'q' = hủy, 'e' = thoát
+// Đọc một dòng chuỗi. Gõ ':q' = hủy, ':e' = thoát, ':clear' = xóa màn hình
 string readLine(const string& prompt) {
-    cout << prompt << " (q=huy / e=thoat) ";
+    cout << prompt << " (:q=huy / :e=thoat / :clear=xoa man hinh) ";
     if (cin.peek() == '\n') cin.ignore();
     string s;
     getline(cin, s);
@@ -128,26 +170,33 @@ void demo_math() {
 
     NTL::ZZ a = NTL::ZZ(252), b = NTL::ZZ(105);
 
-    cout << "GCD(" << a << ", " << b << ") = "
-        << BigInt::GCD(a, b) << "\n";
+    auto t = timeStart();
+    cout << "GCD(" << a << ", " << b << ") = " << BigInt::GCD(a, b) << "\n";
+    timePrint(t, "GCD");
 
     NTL::ZZ x, y;
+    t = timeStart();
     NTL::ZZ g = BigInt::ExtendedGCD(a, b, x, y);
+    timePrint(t, "ExtendedGCD");
     cout << "ExtendedGCD: gcd=" << g
         << ",  x=" << x << ",  y=" << y << "\n";
     cout << "  Kiem tra: " << a << "*" << x
         << " + " << b << "*" << y << " = " << (a * x + b * y) << "\n";
 
     NTL::ZZ A = NTL::ZZ(3), M = NTL::ZZ(11);
+    t = timeStart();
     NTL::ZZ inv = BigInt::ModularInverse(A, M);
+    timePrint(t, "ModularInverse");
     cout << "ModularInverse(" << A << ", " << M << ") = " << inv << "\n";
     cout << "  Kiem tra: " << A << " * " << inv
         << " mod " << M << " = " << (A * inv) % M << "\n";
 
     NTL::ZZ base = NTL::ZZ(2), exp = NTL::ZZ(10), mod = NTL::ZZ(1000);
+    t = timeStart();
+    NTL::ZZ pm = BigInt::PowerMod(base, exp, mod);
+    timePrint(t, "PowerMod");
     cout << "PowerMod(" << base << "^" << exp
-        << " mod " << mod << ") = "
-        << BigInt::PowerMod(base, exp, mod) << "\n";
+        << " mod " << mod << ") = " << pm << "\n";
 }
 
 // ============================================================
@@ -157,12 +206,16 @@ void demo_prime() {
     printSep("DEMO 2: Sinh so nguyen to lon");
 
     cout << "Dang sinh so nguyen to 512-bit...\n";
+    auto t = timeStart();
     NTL::ZZ p512 = BigInt::GenerateStrongLargePrime(512);
+    timePrint(t, "GenerateStrongLargePrime 512-bit");
     cout << "p (512-bit) = " << p512 << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p512) << "\n";
 
     cout << "\nDang sinh so nguyen to 1024-bit...\n";
+    t = timeStart();
     NTL::ZZ p1024 = BigInt::GenerateStrongLargePrime(1024);
+    timePrint(t, "GenerateStrongLargePrime 1024-bit");
     cout << "p (1024-bit) = " << p1024 << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p1024) << "\n";
 }
@@ -174,20 +227,28 @@ void demo_keygen(int bits = 512) {
     printSep("DEMO 3: Tao bo khoa RSA (" + to_string(bits * 2) + "-bit modulus)");
 
     cout << "Dang sinh p (" << bits << "-bit)...\n";
+    auto t = timeStart();
     NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
+    timePrint(t, "Sinh p");
 
     cout << "Dang sinh q (" << bits << "-bit)...\n";
+    t = timeStart();
     NTL::ZZ q = BigInt::GenerateStrongLargePrime(bits);
+    timePrint(t, "Sinh q");
 
     while (p == q) {
         cout << "p == q, sinh lai q...\n";
+        t = timeStart();
         q = BigInt::GenerateStrongLargePrime(bits);
+        timePrint(t, "Sinh lai q");
     }
 
     cout << "\np = " << p << "\n";
     cout << "q = " << q << "\n";
 
+    t = timeStart();
     BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
+    timePrint(t, "GenerateKeyPair");
 
     cout << "\n--- Bo khoa RSA ---\n";
     cout << "n   = " << kp.n << "\n";
@@ -216,10 +277,14 @@ void demo_encrypt_number() {
     NTL::ZZ message = NTL::ZZ(123456789);
     cout << "Thong diep goc (M)       : " << message << "\n";
 
+    auto t = timeStart();
     NTL::ZZ cipher = BigInt::Encrypt(message, kp.e, kp.n);
+    timePrint(t, "Encrypt");
     cout << "Ban ma (C = M^e mod n)   : " << cipher << "\n";
 
+    t = timeStart();
     NTL::ZZ decrypted = BigInt::Decrypt(cipher, kp.d, kp.n);
+    timePrint(t, "Decrypt");
     cout << "Giai ma (M = C^d mod n)  : " << decrypted << "\n";
 
     cout << "Ket qua: "
@@ -251,9 +316,14 @@ void demo_encrypt_string() {
     }
 
     NTL::ZZ C = BigInt::Encrypt(M, kp.e, kp.n);
+    auto t = timeStart();
+    C = BigInt::Encrypt(M, kp.e, kp.n);
+    timePrint(t, "Encrypt (string)");
     cout << "C (ban ma) : " << C << "\n";
 
+    t = timeStart();
     NTL::ZZ M2 = BigInt::Decrypt(C, kp.d, kp.n);
+    timePrint(t, "Decrypt (string)");
     string recovered = ZZToString(M2);
     cout << "Giai ma    : \"" << recovered << "\"\n";
 
@@ -279,13 +349,18 @@ void interactive_math() {
     if (choice == 1) {
         NTL::ZZ a = readZZ("  Nhap a: ");
         NTL::ZZ b = readZZ("  Nhap b: ");
-        cout << "  GCD(" << a << ", " << b << ") = " << BigInt::GCD(a, b) << "\n";
+        auto t = timeStart();
+        NTL::ZZ result = BigInt::GCD(a, b);
+        timePrint(t, "GCD");
+        cout << "  GCD(" << a << ", " << b << ") = " << result << "\n";
     }
     else if (choice == 2) {
         NTL::ZZ a = readZZ("  Nhap a: ");
         NTL::ZZ b = readZZ("  Nhap b: ");
         NTL::ZZ x, y;
+        auto t = timeStart();
         NTL::ZZ g = BigInt::ExtendedGCD(a, b, x, y);
+        timePrint(t, "ExtendedGCD");
         cout << "  gcd = " << g << ",  x = " << x << ",  y = " << y << "\n";
         cout << "  Kiem tra: " << a << "*" << x << " + " << b << "*" << y
             << " = " << (a * x + b * y) << "\n";
@@ -294,7 +369,9 @@ void interactive_math() {
         NTL::ZZ a = readZZ("  Nhap a: ");
         NTL::ZZ m = readZZ("  Nhap m: ");
         try {
+            auto t = timeStart();
             NTL::ZZ inv = BigInt::ModularInverse(a, m);
+            timePrint(t, "ModularInverse");
             cout << "  " << a << "^(-1) mod " << m << " = " << inv << "\n";
             cout << "  Kiem tra: " << a << " * " << inv << " mod " << m
                 << " = " << (a * inv) % m << "\n";
@@ -308,8 +385,11 @@ void interactive_math() {
         NTL::ZZ exp = readZZ("  Nhap exp (>= 0): ");
         NTL::ZZ mod = readZZ("  Nhap mod (> 0): ");
         if (mod <= 0) { cout << "  [Loi] mod phai > 0.\n"; return; }
+        auto t = timeStart();
+        NTL::ZZ result = BigInt::PowerMod(base, exp, mod);
+        timePrint(t, "PowerMod");
         cout << "  " << base << "^" << exp << " mod " << mod
-            << " = " << BigInt::PowerMod(base, exp, mod) << "\n";
+            << " = " << result << "\n";
     }
 }
 
@@ -321,7 +401,9 @@ void interactive_prime() {
 
     int bits = readInt("Nhap so bit (32 - 2048): ", 32, 2048);
     cout << "Dang sinh so nguyen to " << bits << "-bit...\n";
+    auto t = timeStart();
     NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
+    timePrint(t, "GenerateStrongLargePrime");
     cout << "p = " << p << "\n";
     cout << "So bit thuc te: " << NTL::NumBits(p) << "\n";
 }
@@ -342,12 +424,18 @@ void interactive_keygen() {
     if (choice == 1) {
         int bits = readInt("Nhap so bit cho moi so nguyen to (16 - 1024): ", 16, 1024);
         cout << "Dang sinh p...\n";
+        auto t = timeStart();
         p = BigInt::GenerateStrongLargePrime(bits);
+        timePrint(t, "Sinh p");
         cout << "Dang sinh q...\n";
+        t = timeStart();
         q = BigInt::GenerateStrongLargePrime(bits);
+        timePrint(t, "Sinh q");
         while (p == q) {
             cout << "p == q, sinh lai q...\n";
+            t = timeStart();
             q = BigInt::GenerateStrongLargePrime(bits);
+            timePrint(t, "Sinh lai q");
         }
     }
     else {
@@ -360,7 +448,9 @@ void interactive_keygen() {
     cout << "q = " << q << "\n";
 
     try {
+        auto t = timeStart();
         BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
+        timePrint(t, "GenerateKeyPair");
         cout << "\n--- Bo khoa RSA ---\n";
         cout << "n = " << kp.n << "\n";
         cout << "e = " << kp.e << "\n";
@@ -396,13 +486,19 @@ void interactive_encrypt_only() {
     if (sub == 1) {
         NTL::ZZ M = readZZ("Nhap M (0 <= M < n): ");
         if (M < 0 || M >= n) { cout << "[Loi] M sai khoang cho phep.\n"; return; }
-        cout << "Ban ma C = " << BigInt::Encrypt(M, e, n) << "\n";
+        auto t = timeStart();
+        NTL::ZZ C = BigInt::Encrypt(M, e, n);
+        timePrint(t, "Encrypt (so nguyen)");
+        cout << "Ban ma C = " << C << "\n";
     }
     else if (sub == 2) {
         string pt = readLine("Nhap plaintext:");
         NTL::ZZ M = StringToZZ(pt);
         if (M >= n) { cout << "[Loi] Chuoi qua dai.\n"; return; }
-        cout << "Ban ma C = " << BigInt::Encrypt(M, e, n) << "\n";
+        auto t = timeStart();
+        NTL::ZZ C = BigInt::Encrypt(M, e, n);
+        timePrint(t, "Encrypt (chuoi)");
+        cout << "Ban ma C = " << C << "\n";
     }
 }
 
@@ -424,7 +520,9 @@ void interactive_decrypt_only() {
         << "[0] Quay lai\n";
     int sub = readInt("Chon loai ket qua mong muon:", 0, 2);
 
+    auto t = timeStart();
     NTL::ZZ M = BigInt::Decrypt(C, d, n);
+    timePrint(t, "Decrypt");
 
     if (sub == 1) {
         cout << "Ket qua M = " << M << "\n";
@@ -457,11 +555,15 @@ void interactive_encrypt_number() {
         return;
     }
 
+    auto t = timeStart();
     NTL::ZZ C = BigInt::Encrypt(M, e, n);
+    timePrint(t, "Encrypt");
     cout << "Ban ma C = M^e mod n = " << C << "\n";
 
     if (d > 0) {
+        t = timeStart();
         NTL::ZZ M2 = BigInt::Decrypt(C, d, n);
+        timePrint(t, "Decrypt");
         cout << "Giai ma M' = C^d mod n = " << M2 << "\n";
         cout << "Ket qua: " << (M == M2 ? "THANH CONG [OK]" : "THAT BAI [FAILED]") << "\n";
     }
@@ -488,11 +590,15 @@ void interactive_encrypt_string() {
         return;
     }
 
+    auto t = timeStart();
     NTL::ZZ C = BigInt::Encrypt(M, e, n);
+    timePrint(t, "Encrypt");
     cout << "Ban ma C = " << C << "\n";
 
     if (d > 0) {
+        t = timeStart();
         NTL::ZZ M2 = BigInt::Decrypt(C, d, n);
+        timePrint(t, "Decrypt");
         string recovered = ZZToString(M2);
         cout << "Giai ma    : \"" << recovered << "\"\n";
         cout << "Ket qua    : "
@@ -510,12 +616,23 @@ void interactive_full_flow() {
     int bits = readInt("Nhap so bit cho moi so nguyen to (16 - 1024): ", 16, 1024);
 
     cout << "Dang sinh p...\n";
+    auto t = timeStart();
     NTL::ZZ p = BigInt::GenerateStrongLargePrime(bits);
+    timePrint(t, "Sinh p");
     cout << "Dang sinh q...\n";
+    t = timeStart();
     NTL::ZZ q = BigInt::GenerateStrongLargePrime(bits);
-    while (p == q) { cout << "p == q, sinh lai...\n"; q = BigInt::GenerateStrongLargePrime(bits); }
+    timePrint(t, "Sinh q");
+    while (p == q) {
+        cout << "p == q, sinh lai...\n";
+        t = timeStart();
+        q = BigInt::GenerateStrongLargePrime(bits);
+        timePrint(t, "Sinh lai q");
+    }
 
+    t = timeStart();
     BigInt::RSAKeyPair kp = BigInt::GenerateKeyPair(p, q);
+    timePrint(t, "GenerateKeyPair");
     cout << "\n[Khoa da tao]\n";
     cout << "n = " << kp.n << "\n";
     cout << "e = " << kp.e << "\n";
@@ -529,8 +646,12 @@ void interactive_full_flow() {
         return;
     }
 
+    t = timeStart();
     NTL::ZZ C = BigInt::Encrypt(M, kp.e, kp.n);
+    timePrint(t, "Encrypt");
+    t = timeStart();
     NTL::ZZ M2 = BigInt::Decrypt(C, kp.d, kp.n);
+    timePrint(t, "Decrypt");
     string recovered = ZZToString(M2);
 
     cout << "\nPlaintext  : \"" << plaintext << "\"\n";
@@ -548,17 +669,17 @@ void showMainMenu() {
     cout << "\n" << string(60, '-') << "\n";
     cout << "  MENU CHINH\n";
     cout << string(60, '-') << "\n";
-    cout << "  [1]  Chay tat ca demo mau (auto)\n";
+    cout << "  [1]  Chay tat ca demo mau     (auto)\n";
     cout << "  [2]  Demo toan hoc co ban     (interactive)\n";
     cout << "  [3]  Sinh so nguyen to lon    (interactive)\n";
     cout << "  [4]  Tao bo khoa RSA          (interactive)\n";
     cout << "  [5]  Ma hoa                   (interactive)\n";
-	cout << "  [6]  Giai ma                  (interactive)\n";
+    cout << "  [6]  Giai ma                  (interactive)\n";
     cout << "  [7]  Ma hoa va giai ma chuoi  (interactive)\n";
     cout << "  [8]  Luong RSA day du         (interactive)\n";
     cout << "  [0]  Thoat\n";
     cout << string(60, '-') << "\n";
-    cout << "  Tip: Gõ 'q' de huy thao tac dang lam  |  'e' de thoat chuong trinh\n";
+    cout << "  Tip: :q=huy thao tac  |  :e=thoat  |  :clear / Ctrl+L=xoa man hinh\n";
     cout << string(60, '-') << "\n";
 }
 
@@ -582,6 +703,10 @@ int main() {
             catch (const CancelException&) {
                 // Bắt CancelException tại menu chính -> Chuyển thành thoát
                 throw ExitException{};
+            }
+            catch (const ClearException&) {
+                clearScreen();
+                continue;  // vẽ lại menu ngay lập tức
             }
 
             try {
@@ -610,6 +735,10 @@ int main() {
             }
             catch (const CancelException&) {
                 cout << "\n  [Huy] Da quay ve menu chinh.\n";
+            }
+            catch (const ClearException&) {
+                clearScreen();
+                continue;  // vẽ lại menu ngay lập tức, bỏ qua "press enter"
             }
             // ExitException KHÔNG bị bắt ở đây → nổi lên catch ngoài
         }
